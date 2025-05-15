@@ -1,0 +1,8 @@
+roles:
+  - src: https://github.com/geerlingguy/ansible-role-php.git
+    scm: git
+    name: ansible-role-php
+
+  - src: https://github.com/geerlingguy/ansible-role-php-versions.git
+    scm: git
+    name: ansible-role-php-versions

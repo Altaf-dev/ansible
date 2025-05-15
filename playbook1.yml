@@ -1,0 +1,41 @@
+- name: Создание LXC-контейнера
+  hosts: linux1
+  become: yes
+  gather_facts: false    
+  vars:
+    api_user: "root@pam"
+    api_password: "1r1nana"
+    api_host: 192.168.2.191
+    ssh_key: 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCpFsIVky0nHFqrB4pysmZc+I/XSW5P2qjvK8yhAVJDvPiruRHehYBNLXRalrtepxnUp3S6PIL7i6Pu0eIBqfJLp93nvH6IVPWI/0qNJkYDM7xbB/khlxQCzOMMzAeJabCoxyxCnolb7v8onK6+0cBzdqv8vHbU5+SzZDTEk2lTf8Z4Uw1ErIXKEIqtkZWG7Xaf/8xWJRodoaVX4UMRkgX4ZDeXmvUEXjm+ePZhXtHakSaQ1lkVlZ3lSXjUfU87/XxiAZ1I8XRWOXBfjsdy6YX4JQZKQhnOck55e/nvF+xNbqNXmzkMpWw7oEcwAT9p0XYyIFJJuCfYESFf2bltxny4P7eJu/BSrHi35dD4nNiINxPGRfwbFMn7UDFQiBvCrQ2StuExLf/5zm9mjkyE/Pp3PoVg8HfK7uM2DdRGxDpGez8CKdwo5ky1+LvqWMCTorVZSz66ch2Y/jQLjl3jcPH4ztq44/0/rdPK50/NpN7eBUfUEQjQf71ILMLzaob82o0= altaf@altaf-Virtual-Machine'
+
+  tasks:
+    - name: Ensure Python is installed
+      apt:
+          name: python3
+          state: present
+      
+    - name: Ensure pip is installed
+      apt:
+        name: python3-pip
+        state: present
+
+    - name: Ensure required Python libraries are installed
+      pip:
+        name:
+          - proxmoxer
+          - requests
+        state: present
+    - name: Create LXC container
+      proxmox:
+        api_user: "{{ api_user }}"
+        api_password: "{{ api_password }}"
+        api_host: "{{ api_host }}"
+        pubkey: "{{ssh_key}}"
+        hostname: "test-container"
+        node: "test"
+        ostemplate: "local:vztmpl/ubuntu-22.04-standard_22.04-1_amd64.tar.zst"
+        password: "1r1nana"
+        storage: "local-lvm"
+        cores: 2
+        memory: 1024
+        state: present
