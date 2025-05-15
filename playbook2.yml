@@ -3,7 +3,7 @@
   gather_facts: false
   become: yes
   vars_files:
-    - "variables.yml"
+    - "variables/variables.yml"
   vars:  
     - {ansible_python_interpreter: /usr/bin/python3}
   pre_tasks:

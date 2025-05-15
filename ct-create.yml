@@ -1,9 +1,17 @@
-- name: Create new container with minimal options
-  hosts: linux1
+- name: Create new container with minimal options and SSH setup
+  hosts: server1
   gather_facts: false
   become: yes
   vars_files:
-    - "variables.yml"
+    - "group_vars/variables.yml"
+  vars:  
+    - {ansible_python_interpreter: /usr/bin/python3}
+  pre_tasks:
+    - name: Ensure proxmoxer installed
+      apt:
+        name: 
+         - python3-proxmoxer
+        state: present  
   tasks:
     - name: Create a new container
       proxmox:
@@ -16,6 +24,6 @@
         storage: local-lvm
         pubkey: "{{ssh_key}}"
         netif: 
-          net0: 'name=eth0,bridge=vmbr0,ip={{item.ip_address}}{{mask}},gw={{getaway}}'
+          net0: 'name=eth0,bridge=vmbr0,ip={{item.ip_address}}{{mask}},gw={{getaway}}'   
       with_items: "{{ vm }}"
-      
+    

@@ -1,0 +1,79 @@
+---
+- hosts: webservers
+  become: true
+  vars_files:
+    - vars/default.yml
+
+  tasks:
+    - name: Преднастройка пакетного менеджера aptitude
+      apt: name={{ item }} update_cache=yes state=latestforce_apt_get=yes
+      loop: [ 'aptitude' ]
+
+    - name: Установка LEMP-стека
+      apt: name={{ item }} update_cache=yes state=latest
+      loop: [ 'nginx', 'mysql-server', 'python3-pymysql', 'php-fpm', 'php-mysql' ]
+
+     # Настройка Nginx
+    - name: Скопировать и переименовать Nginx конфиг
+      template:
+        src: "files/nginx.conf.j2"
+        dest: "/etc/nginx/sites-available/{{ http_conf }}"
+
+    - name: Создать симлинк
+      file:
+        src: "/etc/nginx/sites-available/{{ http_conf }}"
+        dest: "/etc/nginx/sites-enabled/{{ http_conf }}"
+        state: link
+      notify: Reload Nginx
+
+    - name: Удалить дефолтный сайт
+      file:
+        path: "/etc/nginx/sites-enabled/default"
+        state: absent
+      notify: Reload Nginx
+
+# Настройка MySQL
+    - name: Установка пользователя для подключения
+      mysql_user:
+        name: root
+        password: "{{ mysql_root_password }}"
+        login_unix_socket: /var/run/mysqld/mysqld.sock
+
+    - name: Удаление всех анонимных аккаунтов
+      mysql_user:
+        name: ''
+        host_all: yes
+        state: absent
+        login_user: root
+        login_password: "{{ mysql_root_password }}"
+
+    - name: Удаление тестовой базы данных
+      mysql_db:
+        name: test
+        state: absent
+        login_user: root
+        login_password: "{{ mysql_root_password }}"
+
+# Настройка UFW
+    - name: "UFW - открытие {{ http_port }} HTTP порта"
+      ufw:
+        rule: allow
+        port: "{{ http_port }}"
+        proto: tcp
+
+# Настройка PHP info страницы
+    - name: Настройка PHP info страницы
+      template:
+        src: "files/info.php.j2"
+        dest: "/var/www/html/info.php"
+
+  handlers:
+    - name: Перезагрузка Nginx
+      service:
+        name: nginx
+        state: reloaded
+
+    - name: Рестарт Nginx
+      service:
+        name: nginx
+        state: restarted

@@ -1,0 +1,12 @@
+- name: Установка Nginx
+  hosts: webservers
+  # vars_files:
+  #   - "group_vars/php83.yml"
+
+  become: yes
+  become_method: su
+  roles:
+  # - webserver
+  # - ansible-role-php-versions
+  # - ansible-role-php
+    - lemp

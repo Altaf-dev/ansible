@@ -1,3 +1,5 @@
+ansible_user: root
+ansible_password: 1r1nana
 api_user: root@pam
 api_password: 1r1nana
 api_host: 192.168.2.191
@@ -12,10 +14,10 @@ rockylinux9: 'local:vztmpl/rockylinux-9-default_20240912_amd64.tar.xz'
 vm:
   - { node: test,
     #   vmid: 100,
-      host: test-container, 
-      ip_address: 192.168.2.193,
+      host: web-server, 
+      ip_address: 192.168.2.194,
       ostemplate: "{{ubuntu2204}}",
-      state: started,
+      # state: started,
       }
 
 
