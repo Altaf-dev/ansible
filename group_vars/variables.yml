@@ -2,16 +2,22 @@ ansible_user: root
 ansible_password: 1r1nana
 api_user: root@pam
 api_password: 1r1nana
-password: 1r1nana
-group: sudo
 api_host: 192.168.2.191
 ssh_key: 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCpFsIVky0nHFqrB4pysmZc+I/XSW5P2qjvK8yhAVJDvPiruRHehYBNLXRalrtepxnUp3S6PIL7i6Pu0eIBqfJLp93nvH6IVPWI/0qNJkYDM7xbB/khlxQCzOMMzAeJabCoxyxCnolb7v8onK6+0cBzdqv8vHbU5+SzZDTEk2lTf8Z4Uw1ErIXKEIqtkZWG7Xaf/8xWJRodoaVX4UMRkgX4ZDeXmvUEXjm+ePZhXtHakSaQ1lkVlZ3lSXjUfU87/XxiAZ1I8XRWOXBfjsdy6YX4JQZKQhnOck55e/nvF+xNbqNXmzkMpWw7oEcwAT9p0XYyIFJJuCfYESFf2bltxny4P7eJu/BSrHi35dD4nNiINxPGRfwbFMn7UDFQiBvCrQ2StuExLf/5zm9mjkyE/Pp3PoVg8HfK7uM2DdRGxDpGez8CKdwo5ky1+LvqWMCTorVZSz66ch2Y/jQLjl3jcPH4ztq44/0/rdPK50/NpN7eBUfUEQjQf71ILMLzaob82o0= altaf@altaf-Virtual-Machine'
-hostname: test-container
 getaway: 192.168.2.199
 mask: /24
 
 ubuntu2204: 'local:vztmpl/ubuntu-22.04-standard_22.04-1_amd64.tar.zst'
 rockylinux9: 'local:vztmpl/rockylinux-9-default_20240912_amd64.tar.xz'
+
+# Пользовательские настройки
+user_name: altaf
+user_comment: "Описание пользователя"
+user_password: 1r1nana  # лучше использовать ansible-vault для хранения
+user_group: users  # или другая группа по вашему выбору
+user_ssh_key: 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCpFsIVky0nHFqrB4pysmZc+I/XSW5P2qjvK8yhAVJDvPiruRHehYBNLXRalrtepxnUp3S6PIL7i6Pu0eIBqfJLp93nvH6IVPWI/0qNJkYDM7xbB/khlxQCzOMMzAeJabCoxyxCnolb7v8onK6+0cBzdqv8vHbU5+SzZDTEk2lTf8Z4Uw1ErIXKEIqtkZWG7Xaf/8xWJRodoaVX4UMRkgX4ZDeXmvUEXjm+ePZhXtHakSaQ1lkVlZ3lSXjUfU87/XxiAZ1I8XRWOXBfjsdy6YX4JQZKQhnOck55e/nvF+xNbqNXmzkMpWw7oEcwAT9p0XYyIFJJuCfYESFf2bltxny4P7eJu/BSrHi35dD4nNiINxPGRfwbFMn7UDFQiBvCrQ2StuExLf/5zm9mjkyE/Pp3PoVg8HfK7uM2DdRGxDpGez8CKdwo5ky1+LvqWMCTorVZSz66ch2Y/jQLjl3jcPH4ztq44/0/rdPK50/NpN7eBUfUEQjQf71ILMLzaob82o0= altaf@altaf-Virtual-Machine' # публичный SSH ключ пользователя
+sudo_without_password: false  # установите false, если хотите, чтобы sudo запрашивал пароль
+ssh_private_key_file: "/home/altaf/.ssh/id_rsa"  # путь к приватному ключу для подключения
 
 vm:
   - { node: test,

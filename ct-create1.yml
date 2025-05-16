@@ -1,0 +1,123 @@
+- name: Create new containers in Proxmox
+  hosts: webserver
+  become: yes
+  gather_facts: false
+  vars_files:
+    - "group_vars/variables.yml"
+  tasks:
+    - name: Ensure proxmoxer is installed
+      pip:
+        name: proxmoxer
+        state: present
+      become: yes
+      become_method: sudo
+      
+    - name: Create a new container
+      proxmox:
+        api_user: "{{api_user}}"
+        api_password: "{{api_password}}"
+        api_host: "{{api_host}}"
+        node: "{{item.node}}"
+        hostname: "{{item.host}}"
+        ostemplate: "{{item.ostemplate}}"
+        storage: local-lvm
+        pubkey: "{{ssh_key}}"
+        netif: 
+          net0: 'name=eth0,bridge=vmbr0,ip={{item.ip_address}}{{mask}},gw={{getaway}}'   
+      with_items: "{{ vm }}"
+      register: container_result
+      
+    - name: Debug container result
+      debug:
+        var: container_result
+      
+    - name: Add newly created containers to inventory
+      add_host:
+        hostname: "{{ item.ip_address }}"
+        groups: new_containers
+        ansible_user: root
+        ansible_ssh_private_key_file: "{{ ssh_private_key_file | default(omit) }}"
+      with_items: "{{ vm }}"
+      when: container_result is changed
+      
+    - name: Wait for SSH to come up on new containers
+      wait_for:
+        host: "{{ item.ip_address }}"
+        port: 22
+        delay: 10
+        timeout: 300
+        state: started
+      with_items: "{{ vm }}"
+      when: container_result is changed
+      
+    - name: Pause for SSH to fully initialize
+      pause:
+        seconds: 30
+      when: container_result is changed
+
+- name: Configure newly created containers
+  hosts: new_containers
+  gather_facts: false
+  become: yes
+  vars_files:
+    - "group_vars/variables.yml"
+  tasks:
+    - name: Wait for connection to be available
+      wait_for_connection:
+        timeout: 60
+        
+    - name: Gather facts
+      setup:
+        
+    - name: Update packages
+      apt:
+        update_cache: yes
+        upgrade: yes
+      
+    - name: Install required packages
+      apt:
+        name: 
+          - sudo
+          - python3
+        state: present
+    
+    - name: Create user group
+      group:
+        name: "{{ user_group | default('users') }}"
+        state: present
+    
+    - name: Create user account
+      user:
+        name: "{{ user_name }}"
+        comment: "{{ user_comment | default('Ansible managed user') }}"
+        password: "{{ user_password | password_hash('sha512') }}"
+        shell: /bin/bash
+        groups: "{{ user_group | default('users') }},sudo"
+        append: yes
+        create_home: yes
+        state: present
+    
+    - name: Create .ssh directory for user
+      file:
+        path: "/home/{{ user_name }}/.ssh"
+        state: directory
+        owner: "{{ user_name }}"
+        group: "{{ user_group | default('users') }}"
+        mode: '0700'
+    
+    - name: Add SSH public key to authorized_keys
+      copy:
+        content: "{{ user_ssh_key }}"
+        dest: "/home/{{ user_name }}/.ssh/authorized_keys"
+        owner: "{{ user_name }}"
+        group: "{{ user_group | default('users') }}"
+        mode: '0600'
+    
+    - name: Configure sudoers for the new user
+      lineinfile:
+        path: /etc/sudoers.d/{{ user_name }}
+        line: "{{ user_name }} ALL=(ALL) {{ 'NOPASSWD: ' if sudo_without_password | default(true) else '' }}ALL"
+        state: present
+        mode: '0440'
+        create: yes
+        validate: 'visudo -cf %s'
