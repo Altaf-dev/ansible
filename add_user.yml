@@ -1,0 +1,50 @@
+---
+- name:
+  hosts: servers
+  gather_facts: false
+  become: yes
+  vars_files:
+    - "group_vars/variables.yml"    
+  tasks:
+    - name: Получить информацию о пользователе
+      ansible.builtin.getent:
+        database: passwd
+        key: "{{ create_user }}"
+      register: user_info
+      ignore_errors: yes
+
+    - name: Получить информацию о группе
+      ansible.builtin.getent:
+        database: group
+        key: "{{ group }}"
+      register: group_info
+      ignore_errors: yes
+
+    - name: Отладка - показать информацию о пользователе
+      ansible.builtin.debug:
+        msg: "User info: {{ user_info }}"
+
+    - name: Отладка - показать информацию о группе
+      ansible.builtin.debug:
+        msg: "Group info: {{ group_info }}"
+
+    - name: Проверить, состоит ли пользователь в группе
+      set_fact:
+        user_in_group: "{{ group in user_info.entries.groups }}"
+      when: user_info is defined and user_info.entries is defined
+
+    - name: Добавить пользователя и задать ему пароль, если пользователя не существует
+      ansible.builtin.user:
+        name: "{{ username }}"
+        password: "{{ create_password | password_hash('sha512') }}"  # Зашифровываем пароль
+        state: present
+        shell: /bin/bash
+        create_home: yes
+      when: user_info is undefined
+
+    - name:  Добавить пользователя в группу sudo, если группа sudo существует.
+      ansible.builtin.user:
+        name: "{{ username }}"
+        groups: "{{ group }}"
+        append: yes
+      when: user_info.entries is defined and not user_in_group

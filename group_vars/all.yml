@@ -1,2 +1,8 @@
 ansible_user: root
 ansible_password: 1r1nana
+
+mysql_root_password: password
+http_host: 192.168.2.193
+http_conf: webserver.conf
+http_port: "80"
+disable_default: true

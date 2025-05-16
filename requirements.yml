@@ -10,3 +10,7 @@ roles:
   - src: https://github.com/geerlingguy/ansible-role-mysql.git
     scm: git
     name: ansible-role-mysql
+
+  - src: https://github.com/do-community/ansible-playbooks.git
+    scm: git
+    name: ansible-lemp  

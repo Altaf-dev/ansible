@@ -2,7 +2,7 @@
 # DO Community Playbooks: LEMP on Ubuntu 18.04
 ##################################################
 ---
-- hosts: webservers
+- hosts: webserver
   become: true
   vars_files:
     - vars/default.yml
@@ -69,30 +69,6 @@
       template:
         src: "files/info.php.j2"
         dest: "/var/www/html/info.php"
-
-
-    - name: Ensure UFW is installed
-      apt:
-        name: ufw
-        state: present
-        update_cache: yes
-
-    - name: Allow SSH
-      ufw:
-        rule: allow
-        name: OpenSSH
-
-    - name: Allow HTTP
-      ufw:
-        rule: allow
-        port: 80
-        proto: tcp
-
-    - name: Enable UFW
-      ufw:
-        state: enabled
-        policy: deny
-
 
   handlers:
     - name: Reload Nginx
