@@ -1,0 +1,201 @@
+---
+- hosts: webservers1
+  become: true
+  vars_files:
+    - vars/default.yml
+  tasks:
+    - name: Install passlib with pip
+      pip:
+        name: passlib
+      become: true
+
+    - name: Install Prerequisites
+      apt: name={{ item }} update_cache=yes state=latest force_apt_get=yes
+      loop: [ 'aptitude' ]
+
+    - name: Install LEMP Packages
+      apt: name={{ item }} update_cache=yes state=latest
+      loop: [ 'nginx', 'mysql-server', 'python3-pymysql', 'php-fpm', 'php-mysql' ]
+    
+# FTP Server Installation and Configuration
+    - name: Install VSFTPD
+      apt: 
+        name: vsftpd
+        state: latest
+        update_cache: yes
+    
+    - name: Backup original vsftpd configuration
+      copy:
+        src: /etc/vsftpd.conf
+        dest: /etc/vsftpd.conf.bak
+        remote_src: yes
+        force: no
+    - name: Configure VSFTPD
+      template:
+        src: "files/vsftpd.conf.j2"
+        dest: "/etc/vsftpd.conf"
+      notify: Restart VSFTPD
+    - name: Ensure VSFTPD is running and enabled
+      service:
+        name: vsftpd
+        state: started
+        enabled: yes
+    - name: "UFW - Allow FTP on port 21"
+      ufw:
+        rule: allow
+        port: 21
+        proto: tcp
+    - name: "UFW - Allow FTP passive ports"
+      ufw:
+        rule: allow
+        port: 30000:31000
+        proto: tcp
+
+# phpMyAdmin Installation and Configuration
+    - name: Install required PHP modules for phpMyAdmin
+      apt:
+        name: "{{ item }}"
+        state: latest
+        update_cache: yes
+      loop:
+        - php-json
+        - php-mbstring
+        - php-zip
+        - php-gd
+        - php-xml
+        - php-curl
+        # - php-mcrypt
+        - php-imap
+        - php-mysqlnd
+        - php-cli
+  
+    - name: Set noninteractive mode for automated installation
+      shell: export DEBIAN_FRONTEND=noninteractive
+      
+    - name: Create phpMyAdmin debconf-set-selections
+      debconf:
+        name: phpmyadmin
+        question: "{{ item.question }}"
+        value: "{{ item.value }}"
+        vtype: "{{ item.vtype }}"
+      with_items:
+        - { question: 'phpmyadmin/dbconfig-install', value: 'true', vtype: 'boolean' }
+        - { question: 'phpmyadmin/app-password-confirm', value: '{{ phpmyadmin_app_pass | default(mysql_root_password) }}', vtype: 'password' }
+        - { question: 'phpmyadmin/mysql/admin-pass', value: '{{ mysql_root_password }}', vtype: 'password' }
+        - { question: 'phpmyadmin/mysql/app-pass', value: '{{ phpmyadmin_app_pass | default(mysql_root_password) }}', vtype: 'password' }
+        - { question: 'phpmyadmin/reconfigure-webserver', value: 'nginx', vtype: 'multiselect' }
+
+    - name: Install phpMyAdmin
+      apt:
+        name: phpmyadmin
+        state: latest
+        update_cache: yes
+      
+    - name: Create phpMyAdmin symbolic link
+      file:
+        src: /usr/share/phpmyadmin
+        dest: /var/www/html/phpmyadmin
+        state: link
+      notify: Reload Nginx
+      
+    - name: Secure phpMyAdmin with htpasswd
+      htpasswd:
+        path: /etc/nginx/phpmyadmin-htpasswd
+        name: "{{ phpmyadmin_admin_user | default('admin') }}"
+        password: "{{ phpmyadmin_admin_password | default(mysql_root_password) }}"
+        owner: www-data
+        group: www-data
+        mode: 0644
+        
+    - name: Set up phpMyAdmin Nginx configuration
+      template:
+        src: "files/phpmyadmin-nginx.conf.j2"
+        dest: "/etc/nginx/snippets/phpmyadmin.conf"
+      notify: Reload Nginx
+      
+    - name: Include phpMyAdmin snippets in Nginx configuration
+      lineinfile:
+        path: "/etc/nginx/sites-available/{{ http_conf }}"
+        line: "    include snippets/phpmyadmin.conf;"
+        insertbefore: "    location / {"
+        state: present
+      notify: Reload Nginx
+    
+# Nginx Configuration
+    - name: Sets Nginx conf file
+      template:
+        src: "files/nginx.conf.j2"
+        dest: "/etc/nginx/sites-available/{{ http_conf }}"
+    - name: Enables new site
+      file:
+        src: "/etc/nginx/sites-available/{{ http_conf }}"
+        dest: "/etc/nginx/sites-enabled/{{ http_conf }}"
+        state: link
+      notify: Reload Nginx
+    
+    - name: Removes "default" site
+      file:
+        path: "/etc/nginx/sites-enabled/default"
+        state: absent
+      notify: Reload Nginx
+# MySQL Configuration
+    - name: Sets the root password 
+      mysql_user: 
+        name: root 
+        password: "{{ mysql_root_password }}"
+        login_unix_socket: /var/run/mysqld/mysqld.sock
+    - name: Removes all anonymous user accounts
+      mysql_user:
+        name: ''
+        host_all: yes
+        state: absent
+        login_user: root
+        login_password: "{{ mysql_root_password }}"
+    - name: Removes the MySQL test database
+      mysql_db: 
+        name: test 
+        state: absent
+        login_user: root
+        login_password: "{{ mysql_root_password }}"
+# UFW Configuration
+    - name: "UFW - Allow HTTP on port {{ http_port }}"
+      ufw:
+        rule: allow
+        port: "{{ http_port }}"
+        proto: tcp
+# Sets Up PHP Info Page
+    - name: Sets Up PHP Info Page
+      template:
+        src: "files/info.php.j2"
+        dest: "/var/www/html/info.php"
+    - name: Ensure UFW is installed
+      apt:
+        name: ufw
+        state: present
+        update_cache: yes
+    - name: Allow SSH
+      ufw:
+        rule: allow
+        name: OpenSSH
+    - name: Allow HTTP
+      ufw:
+        rule: allow
+        port: 80
+        proto: tcp
+    - name: Enable UFW
+      ufw:
+        state: enabled
+        policy: deny
+  handlers:
+    - name: Reload Nginx
+      service:
+        name: nginx
+        state: reloaded
+    - name: Restart Nginx
+      service:
+        name: nginx
+        state: restarted
+    - name: Restart VSFTPD
+      service:
+        name: vsftpd
+        state: restarted

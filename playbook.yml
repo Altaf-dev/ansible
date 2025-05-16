@@ -1,6 +1,3 @@
-##################################################
-# DO Community Playbooks: LEMP on Ubuntu 18.04
-##################################################
 ---
 - hosts: webservers
   become: true

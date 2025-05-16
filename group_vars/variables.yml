@@ -19,10 +19,15 @@ user_ssh_key: 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCpFsIVky0nHFqrB4pysmZc+I/XS
 sudo_without_password: false  # установите false, если хотите, чтобы sudo запрашивал пароль
 ssh_private_key_file: "/home/altaf/.ssh/id_rsa"  # путь к приватному ключу для подключения
 
+# phpMyAdmin settings
+phpmyadmin_admin_user: admin  # Имя пользователя для доступа к phpMyAdmin
+phpmyadmin_admin_password: root # Пароль для доступа (по умолчанию используется mysql_root_password)
+phpmyadmin_app_pass: root  # Пароль для приложения phpMyAdmin (по умолчанию используется mysql_root_password)
+
 vm:
-  - { node: test,
+  - { node: test2,
     #   vmid: 100,
-      host: webserver, 
+      host: webserver2, 
       ip_address: 192.168.2.193,
       ostemplate: "{{ubuntu2204}}",
       # state: started,
